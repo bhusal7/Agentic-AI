@@ -7,7 +7,7 @@ class pipelinestate(TypedDict):
     raw_input : str
     edited_text : str
     script_text : str
-    final_ouput : str
+    final_output : str
     
 
 from langchain_groq import ChatGroq
@@ -66,11 +66,42 @@ def translator_node(state: pipelinestate) -> dict:
     
     response = llm.invoke(prompt)
     
-    return {"final_ouput": response.content.strip()}
+    return {"final_output": response.content.strip()}
+
+
 
 # now your state and nodes are ready & now it's time to create the graph
 #  & for creating the graph you  have to connect these nodes & for that you've to use the edges
 # edges are very important to create the workflows
 
+from langgraph.graph import StateGraph, START, END
+
+# create the graph 
+graph = StateGraph(pipelinestate)
+
+# add the nodes in our graph
+
+graph.add_node("editor",editor_node)
+graph.add_node("scriptwriter",scriptwriter_node)
+graph.add_node("translator",translator_node)
 
 
+
+# Add edges (sequential) - one after another
+
+graph.add_edge(START, "editor") 
+graph.add_edge("editor", "scriptwriter")
+graph.add_edge("scriptwriter", "translator")
+graph.add_edge("translator", END)
+
+
+# compile the Graph
+app = graph.compile() 
+
+result = app.invoke({
+    "raw_input" : "AI Agents are the future of tech. They can think plan & act on their own. Langgraph helps you build these agents with peoper control & memory"
+})
+
+# Final Output 
+print("Your result are :- \n\n")
+print(result['final_output'])
