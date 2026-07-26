@@ -19,28 +19,42 @@ embeddings = HuggingFaceEmbeddings(model_name = "sentence-transformers/all-MiniL
 def build_retriver(pdf_path : str):
     loader = PyPDFLoader(pdf_path)
     document = loader.load()
-
-    splitter = RecursiveCharacterTextSplitter(chunk_size = 800, 
-                                              chunk_overlap = 100)
+    
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size = 800,
+        chunk_overlap = 100
+    )
     
     chunks = splitter.split_documents(document)
-
+    
     vectorstore = FAISS.from_documents(chunks,embeddings)
+    
+    return vectorstore.as_retriever(
+        search_kwargs = {
+            'K':4
+            }
+        )
 
-    return vectorstore.as_retriever(search_kwargs = {"k":4})
+academic_retriver = build_retriver("academics_handbook.pdf")
+fee_retriver = build_retriver("fee_structure.pdf")
 
-acedemic_retriever = build_retriver("academics_handbook.pdf")
-fee_retriever = build_retriver("fee_structure.pdf")
 
 llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.4)
 
 #step2 - State 
 
 class State(TypedDict):
-    programme : str  
-    messages : Annotated[list,add_messages]
-    query_type : str 
-    retrieved_context : str 
+    programme : str  # yesma - bbc or bCom or bca - madhya 1 jancha
+    
+    # use reducers bcz there are many msg like AI,Human and so on , so
+    messages : Annotated[list, add_messages]  # for history
+    
+    # 3 query so -hamro query Kita Academic kita Fees or General huncha so
+    query_type : str
+    
+    # query le kitah answer generate academic kita fee or general ma garcha so create retrive
+    retrived_context : str
+    
 
 #Step 3 - Nodes generation 
     
@@ -61,10 +75,10 @@ def classifier_node(state : State) -> dict:
         f"Query: {last_message}\n\n"
         "Return only one word: academic, fee, or general."
     )
-
+    
     response = llm.invoke(prompt)
     category = response.content.strip().lower()
-
+    
     if "academic" in category:
         category = "academic"
     elif "fee" in category:
@@ -77,28 +91,28 @@ def classifier_node(state : State) -> dict:
 def academic_rag_node(state: State) -> dict:
     """Retrieves relevant chunks from the academics handbook."""
     query = state["messages"][-1].content
-    docs = acedemic_retriever.invoke(query)
+    docs = academic_retriver.invoke(query)
     context = "\n\n".join([doc.page_content for doc in docs])
-    return {"retrieved_context": context}
+    return {"retrived_context": context}
 
 def fee_rag_node(state: State) -> dict:
     """Retrieves relevant chunks from the fee structure PDF."""
     query = state["messages"][-1].content
-    docs = fee_retriever.invoke(query)
+    docs = fee_retriver.invoke(query)
     context = "\n\n".join([doc.page_content for doc in docs])
-    return {"retrieved_context": context}
+    return {"retrived_context": context}
 
 
 def general_node(state: State) -> dict:
     """Answers directly using the LLM's own knowledge, no retrieval needed."""
-    return {"retrieved_context": "NO_RETRIEVAL_NEEDED"}
+    return {"retrived_context": "NO_RETRIEVAL_NEEDED"}
 
 
 def response_node(state: State) -> dict:
     """Generates the final answer, personalized using the student's programme."""
     query = state["messages"][-1].content
     programme = state.get("programme", "Unknown")
-    context = state["retrieved_context"]
+    context = state["retrived_context"]
 
     if context == "NO_RETRIEVAL_NEEDED":
         prompt = (
@@ -117,18 +131,18 @@ def response_node(state: State) -> dict:
         )
 
     response = llm.invoke(prompt)
-    return {"messages": [("ai", response.content.strip())]}
+    return{"messages": [("ai", response.content.strip())]}
 
 
 #step 4 - router function 
 
 def route_query(state:State):
-    if state['query_type'] == 'academic':
-        return "academic_rag"
-    elif state['query_type'] == "fee":
-        return "fee_rag"
+    if state["query_type"] == 'academic':
+        return "academic_rag"    # -> nodes name
+    elif state["query_type"] == 'fee':
+        return "fee_rag"    # -> nodes name
     else:
-        return "general"
+        return "general"   # -> nodes name
 
 
 #step 5 - Building the graph 
@@ -145,8 +159,9 @@ graph.add_node("response",response_node)
 
 graph.add_edge(START,"classifier")
 
+# aba classifier le query type ko response dincha ra query_type ko basic ma 3types select grna milcha - academic rag or fee rag or general
 graph.add_conditional_edges(
-    "classifier",route_query
+    "classifier" , route_query
 )
 
 graph.add_edge("academic_rag","response")
@@ -155,8 +170,9 @@ graph.add_edge("general","response")
 
 graph.add_edge("response",END)
 
-app = graph.compile()
 #step 6 - Run the code 
+
+app = graph.compile()
 
 print("welcome to the College assistant \n\n")
 
@@ -165,26 +181,27 @@ print("1. BCA")
 print("2. BBA")
 print("3. B.com (H)")
 
-choice = input("\nEnter 1, 2 or 3 ")
+choice = input("\nEnter 1, 2 or 3 :- ")
 
 programme_map = {
     "1": "BCA",
     "2": "BBA",
     "3": "B.Com (H)"
 }
-student_programme = programme_map.get(choice, "BCA")
 
-print(f"\nGreat! You're set as a {student_programme} student.")
+student_programme = programme_map.get(choice, 'BCA')
+
+print(f"\n Great! You're set as a {student_programme} student.")
 
 while True:
-    user_query = input("You:  ")
-
-    if user_query.lower() in ["exit","quit"]:
+    
+    user_query = input("You : ")
+    if user_query.lower() == ['exit','quit']:
         break
     
     result = app.invoke({
-        "programme": student_programme,
-        "messages": [("human",user_query)]
+        "programme" : student_programme,
+        "messages" : [("human",user_query)]
     })
-
-    print(f"Assistant : {result['messages'][-1].content}")
+    
+    print(f"Assistant : ", {result['messages'][-1].content})
