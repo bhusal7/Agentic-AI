@@ -96,12 +96,12 @@ graph.add_edge("translator", END)
 
 
 # compile the Graph
-app = graph.compile() 
+app = graph.compile()
 
 result = app.invoke({
     "raw_input" : "AI Agents are the future of tech. They can think plan & act on their own. Langgraph helps you build these agents with peoper control & memory"
 })
 
 # Final Output 
-print("Your result are :- \n\n")
+print("\nYour result are :- \n\n")
 print(result['final_output'])
