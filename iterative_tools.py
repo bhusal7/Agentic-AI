@@ -4,7 +4,7 @@ from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langchain_groq import ChatGroq
-from langchain_openai import ChatOpenAI
+from langchain_mistralai import ChatMistralAI
 from langchain_tavily import TavilySearch
 from dotenv import load_dotenv
 
@@ -15,18 +15,18 @@ load_dotenv()
 
 search_tool = TavilySearch(max_results = 3)
 
-
 tools = [search_tool]
 
-#llms 
 
-#writer
-writer_llm = ChatOpenAI(model= "gpt-4o-mini",temperature=0.7)
+              # LLMs
+
+            # a. writer
+writer_llm = ChatMistralAI(model= "mistral-small-latest",temperature=0.7)
 writer_llm_with_tools = writer_llm.bind_tools(tools)
 
-#reviewer
-
+            # b. reviewer
 reviewer_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
+
 
 #state building 
 
@@ -57,38 +57,43 @@ WRITER_SYSTEM_PROMPT = (
 
 def writer_node(state : State) -> dict:
     """Writes (or rewrites) the LinkedIn post. Can call Tavily to search first."""
-    attempt = state.get("attempt",0) + 1 
+    attempt = state.get("attempt",0) + 1
     topic = state["topic"]
     previous_feedback = state['review_feedback']
 
     if attempt == 1:
         user_message = (
             f"Write a LinkedIn post on this topic {topic}"
-            f"if you need current info search the web first "
+            f"if you need current info search the web first"
         )
     else:
         user_message = (
-            f"your previous draft on '{topic}' was rejected"
+            f"Your previous draft on '{topic}' was rejected"
             f"Here is the reviewer's feedback \n\n {previous_feedback}\n\n"
-            f"Write a new, improved draft that fixes every issue mentiond"
-            f"do not repeat the same mistake"
+            f"Write a new, improved draft that fixes every issue mentioned"
+            f"Don't repeat the same mistake"
         )
-    messages = [("system",WRITER_SYSTEM_PROMPT),("human",user_message)]
+    messages = [
+        ("system",WRITER_SYSTEM_PROMPT),
+        ("human",user_message)
+        ]
     response = writer_llm_with_tools.invoke(messages)
-
+    
     return {
         "messages" : [("human",user_message),response],
-        "attempt" : attempt
+        "attempt" :  attempt
     }
 
 tool_node = ToolNode(tools)
 
+
 def extract_draft_node(state:State) -> dict:
     """After the writer finishes tool calls, pulls the final text out as the draft."""
-    last_message = state['messages'][-1]
-    draft = last_message.content 
-    print(f"\n\n generated post \n {draft} \n ")
-    return {"draft" : draft}
+    last_messages = state["messages"][-1]
+    draft = last_messages.content
+    print("\n\n Generated Post \n {draft} \n")
+    return {"Draft :", draft}
+    
     
 
 REVIEWER_SYSTEM_PROMPT = (
@@ -111,32 +116,24 @@ REVIEWER_SYSTEM_PROMPT = (
 def reviewer_node(state:State) -> dict:
     """Reviews the draft and decides: approve or reject with feedback."""
     draft = state['draft']
-
+    
     prompt = (
-        f"review this LinkedIn post draft : \n"
-        f"{draft}\n"
-        f"give your reviews"
+        f"Review this LinkedIn Post Draft : \n"
+        f{"{draft}\n"}
+        f"give your review"
     )
+    
     response = reviewer_llm.invoke(
-        [("system",REVIEWER_SYSTEM_PROMPT),("human",prompt)]
+        [
+            ("system",REVIEWER_SYSTEM_PROMPT),
+           ( "human",prompt)
+            ]
     )
     review_text = response.content.strip()
     
     is_approved = "APPROVED" in review_text.upper().split("FEEDBACK")[0]
-
-    if "FEEDBACK:" in review_text:
-        feedback = review_text.split("FEEDBACK:", 1)[1].strip()
-    else:
-        feedback = review_text
-
-    verdict = "APPROVED" if is_approved else "REJECTED"
-    print(f"[Verdict: {verdict}]")
-    print(f"[Feedback: {feedback}]")
-
-    return {
-        "review_feedback": feedback,
-        "is_approved": is_approved,
-    }
+    
+    
 
 #router function 
 
