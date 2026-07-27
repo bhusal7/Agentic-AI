@@ -92,7 +92,7 @@ def extract_draft_node(state:State) -> dict:
     last_messages = state["messages"][-1]
     draft = last_messages.content
     print("\n\n Generated Post \n {draft} \n")
-    return {"Draft :", draft}
+    return {"draft :", draft}
     
     
 
@@ -119,7 +119,7 @@ def reviewer_node(state:State) -> dict:
     
     prompt = (
         f"Review this LinkedIn Post Draft : \n"
-        f{"{draft}\n"}
+        f"{draft}\n"
         f"give your review"
     )
     
@@ -133,24 +133,36 @@ def reviewer_node(state:State) -> dict:
     
     is_approved = "APPROVED" in review_text.upper().split("FEEDBACK")[0]
     
+    if "FEEDBACK:" in review_text:
+        feedback = review_text.split("FEEDBACK:",1)[1].strip()
+    else:
+        feedback = review_text
+        
+    verdict = "APPROVED" if is_approved else "REJECTED"
+    print(f"[Verdict: {verdict}]")
+    print(f"[Feedback:] {feedback}")
     
+    return {
+        "review_feedback" : feedback,
+        "is_approved" : is_approved
+    }
 
 #router function 
 
 def should_use_tool(state:State):
     last_message = state['messages'][-1]
-
+    
     if getattr(last_message,'tool_calls',None):
-        return "tools"
+        return 'tools'
     return "extract_draft"
 
 def should_stop_looping(state:State):
     if state['is_approved']:
-        print("post haas been approved \n")
+        print("Post has been approved \n")
         return END
     if state['attempt'] >= 3:
-        print("reached max attempts")
-        return END 
+        print("Reached max attempts")
+        return END
     return "writer"
 
 #build the graph 
