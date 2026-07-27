@@ -92,7 +92,7 @@ def extract_draft_node(state:State) -> dict:
     last_messages = state["messages"][-1]
     draft = last_messages.content
     print("\n\n Generated Post \n {draft} \n")
-    return {"draft :", draft}
+    return {"draft": draft}
     
     
 
