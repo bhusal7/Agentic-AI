@@ -4,15 +4,14 @@ from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import interrupt, Command
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 
 
 load_dotenv()
 
 # writer llm
-writer_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
-
+writer_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
 # state building 
 class State(TypedDict):
     topic: str 
