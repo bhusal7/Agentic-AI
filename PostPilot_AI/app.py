@@ -19,7 +19,7 @@ search_tool = TavilySearch(max_results=3)
 tools = [search_tool]
 
 
-# LLMs
+    # LLMs
 
 # a. writer
 writer_llm = ChatMistralAI(model="mistral-small-latest", temperature=0.7)
