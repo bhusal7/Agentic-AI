@@ -156,7 +156,7 @@ conditional_RAG.py
 
 * PDF Question Answering
 * Vector Search
-* Retrieval-Augmented Generation
+* Retrieval-Augmented Generation (RAG)
 * Conditional Routing
 * Context-based responses
 
