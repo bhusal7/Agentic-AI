@@ -12,7 +12,7 @@
 
 # 📖 About
 
-This repository contains multiple **Agentic AI** projects demonstrating different workflow patterns using **LangGraph**, **LangChain**, and **Large Language Models (LLMs)**.
+This repository contains multiple **Agentic AI** projects demonstrating different workflow patterns using **LangGraph**, **LangChain**, & **Large Language Models (LLMs)**.
 
 The goal of this repository is to understand how autonomous AI systems reason, make decisions, use tools, retrieve knowledge, collaborate with humans, and execute complex workflows.
 
