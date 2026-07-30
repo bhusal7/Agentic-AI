@@ -1,6 +1,6 @@
 # 🤖 Agentic-AI
 
-> A collection of **Agentic AI**, **LangGraph**, **LangChain**, and **Retrieval-Augmented Generation (RAG)** projects built while learning modern AI engineering workflows.
+> A collection of **Agentic AI**, **LangGraph**, **LangChain**, & **Retrieval-Augmented Generation (RAG)** projects built while learning modern AI engineering workflows.
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge\&logo=python)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Agentic%20AI-orange?style=for-the-badge)
